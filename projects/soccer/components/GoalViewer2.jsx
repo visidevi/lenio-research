@@ -1,5 +1,6 @@
-import React, { useState, useCallback, Fragment } from "react";
+import React, { useState, useCallback, Fragment, useEffect } from "react";
 import PropTypes from "prop-types";
+import ReactPlayer from "react-player";
 import {
   Paragraph,
   ChartTitle,
@@ -19,6 +20,7 @@ import { SoccerField } from "./SoccerField";
 import jwt from "jsonwebtoken";
 
 export const GoalViewer = () => {
+  const host = "http://localhost:8000"; //"https://soccer-api.leniolabs.com/";
   const [goal, setGoal] = useState({});
 
   const [secretWord, setSecretWord] = useState("");
@@ -29,11 +31,12 @@ export const GoalViewer = () => {
 
   const getGoal = async (endpoint) => {
     if (!secretWord) {
+      setSecretWord("admin");
       alert("Please enter a valid secret word");
     }
     if (secretWord) {
       const token = jwt.sign({ payload: {} }, secretWord);
-      await fetch(`https://soccer-api.leniolabs.com/${endpoint}`, {
+      await fetch(`${host}/${endpoint}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -55,11 +58,14 @@ export const GoalViewer = () => {
 
   const onSaveGoal = async () => {
     if (!secretWord) {
-      alert("Please enter a valid secret word");
+      // alert("Please enter a valid secret word");
+      setSecretWord("secret");
     }
     if (secretWord) {
       const token = jwt.sign({ payload: goal }, secretWord);
-      await fetch(`https://soccer-api.leniolabs.com/messi/update/${goal.id}`, {
+      alert(token);
+      console.log(token, goal);
+      await fetch(`${host}/messi/update/${goal.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +75,7 @@ export const GoalViewer = () => {
       })
         .then((response) => response.json())
         .catch(() => {
-          alert("Error: please contact administrator");
+          alert("[Error] Catch: please contact administrator");
         });
       await getGoal("messi/latest-to-fill");
     }
@@ -86,6 +92,17 @@ export const GoalViewer = () => {
     [field, goal]
   );
 
+  useEffect(() => {
+    // Client Side Render
+    window
+      .fetch(`${host}/messi/latest-to-fill`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data) setGoal(data);
+      })
+      .catch(console.error);
+  }, []);
+
   return (
     <Fragment>
       <div style={{ gridArea: "field" }}>
@@ -99,12 +116,13 @@ export const GoalViewer = () => {
             </Title>
             <Subtitle style={{ textAlign: "start" }}>Minute {goal.Minute}</Subtitle>
             <Paragraph>vs: {goal["Team"]}</Paragraph>
+            <Paragraph>Goles: {goal["goles"]}</Paragraph>
             <Paragraph>Status Game: {goal["PartialStatus"]}</Paragraph>
             <Paragraph>Assist by: {goal["Assist"]}</Paragraph>
             <Paragraph>Type of goal: {goal["Type of goal"]}</Paragraph>
             <Paragraph>Tournament: {goal["Tournament"]}</Paragraph>
             <Paragraph>
-              Final game result for FC Barcelona: <b>{goal["Final Result"]}</b>
+              Final game result: <b> Argentina {goal["Result"]}</b>
             </Paragraph>
             <GridInformation>
               {information.map((info) => (
@@ -136,12 +154,16 @@ export const GoalViewer = () => {
         <Paragraph>
           {`URL: `}
           <a href="https://youtu.be/a1-iff3lh2U" rel="noopener noreferrer" target="_blank">
-            https://youtu.be/a1-iff3lh2U
+            {goal["video"]}
           </a>
+          <div>
+            <h2>NextJs VideoPlayer - GeeksforGeeks</h2>
+            <ReactPlayer url={goal["video"]} width="450px" height="200px" controls={true} />
+          </div>
         </Paragraph>
         <LabelContainer>
           <label htmlFor={"secret word"}>
-            Enter secret word:
+            Enter secret word: {secretWord}
             <Input
               onChange={({ target: { value } }) => {
                 setSecretWord(value);
